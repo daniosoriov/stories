@@ -70,6 +70,8 @@ class ConnectOpenAI:
             story = variables.example_story
             finish_reason = test_reason
         else:
+            print('Generating a story for:')
+            print(user_message)
             self.messages.append({"role": "user", "content": user_message})
             self.estimated_tokens = self.num_tokens_from_messages(self.messages, self.model)
             openai.api_key = self.api_key
@@ -82,7 +84,9 @@ class ConnectOpenAI:
             )
 
             story = response['choices'][0]['message']['content']
+            print('Story generated.')
             finish_reason = response['choices'][0]['finish_reason']
             self.total_tokens = response['usage']['total_tokens']
+            print(f'Total used tokens: {self.total_tokens}')
 
         return story, finish_reason

@@ -55,7 +55,6 @@ def format_email_text(**kwargs):
         lines.append(f"<strong>{key}</strong>")
         lines.append(str(val))
         lines.append('')
-    st.write(lines)
     return lines
 
 
@@ -115,7 +114,9 @@ def check_prompt():
     # If we have a prompt, moderate it
     else:
         # If the prompt is flagged, we show an error message
-        if not connect_openai.moderate_message(st.session_state.user_message, test=True, test_flagged=True):
+        test = bool(st.secrets.stories.test_moderation)
+        flagged = bool(st.secrets.stories.test_moderation_flagged)
+        if connect_openai.moderate_message(st.session_state.user_message, test=test, test_flagged=flagged):
             prompt_error = variables.prompt_flagged_error
         else:
             prompt_error = False
@@ -124,7 +125,11 @@ def check_prompt():
 
 def generate_story():
     user_message = f'{st.session_state.user_message}.\n\nMake the story for a {st.session_state.age} year old.'
-    story_text, finish_reason = connect_openai.create_story(user_message=user_message, test=True, wait_time=4)
+    test = bool(st.secrets.stories.test_story)
+    wait_time = bool(st.secrets.stories.test_wait_time)
+    reason = st.secrets.stories.test_reason
+    story_text, finish_reason = connect_openai.create_story(user_message=user_message, test=test,
+                                                            test_reason=reason, wait_time=wait_time)
     story_warning_text = None
     if finish_reason == 'length':
         story_warning_text = 'The response was cut off because it was too long.'
@@ -139,6 +144,7 @@ def generate_story():
         'user_message_complete': st.session_state.user_message_complete,
         'story': st.session_state.story,
         'finish_reason': finish_reason,
+        'total_tokens': connect_openai.total_tokens,
     }
     spreadsheet_save_prompt_and_story(list(data.values()))
     lines = format_email_text(**data)
