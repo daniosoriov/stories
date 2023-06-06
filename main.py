@@ -50,7 +50,8 @@ st.title('Story Sprout')
 st.subheader('Create respectful stories for children aged 2-6 using OpenAI GPT-4')
 st.divider()
 
-connect_openai = ConnectOpenAI.ConnectOpenAI(api_key=st.secrets['OPENAI_KEY'])
+connect_openai = ConnectOpenAI.ConnectOpenAI(api_key=st.secrets['OPENAI_KEY'],
+                                             instruction=st.secrets.stories.system_prompt)
 
 
 def create_prompt_section():

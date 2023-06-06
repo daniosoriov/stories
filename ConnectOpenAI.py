@@ -7,13 +7,13 @@ import time
 
 
 class ConnectOpenAI:
-    def __init__(self, api_key: str, **kwargs):
+    def __init__(self, api_key: str, instruction: str, **kwargs):
         self.api_key = api_key
         self.model = kwargs.get('model', 'gpt-4')
         self.max_tokens = kwargs.get('max_tokens', 2048)
         self.frequency_penalty = kwargs.get('frequency_penalty', 0.2)
         self.presence_penalty = kwargs.get('presence_penalty', 0.2)
-        self.messages = [{"role": "system", "content": variables.system_prompt}]
+        self.messages = [{"role": "system", "content": instruction}]
 
         self.estimated_tokens = 0
         self.total_tokens = 0
