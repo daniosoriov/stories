@@ -84,11 +84,10 @@ def generate_story():
     user_message = f'{st.session_state.user_message}\n\nMake the story for a {st.session_state.age} year old.'
     story_text, finish_reason = connect_openai.create_story(user_message=user_message, test=True, wait_time=4)
     story_warning_text = None
-    match finish_reason:
-        case 'length':
-            story_warning_text = 'The response was cut off because it was too long.'
-        case 'content_filter':
-            story_warning_text = 'The story is not respecting OpenAI\'s usage policies.'
+    if finish_reason == 'length':
+        story_warning_text = 'The response was cut off because it was too long.'
+    elif finish_reason == 'content_filter':
+        story_warning_text = 'The story is not respecting OpenAI\'s usage policies.'
     st.session_state.story_warning = story_warning_text
     st.session_state.story = story_text
 
