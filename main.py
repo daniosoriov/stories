@@ -1,37 +1,32 @@
+from typing import List
+
 import ConnectOpenAI
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import datetime
 import streamlit as st
-from google.oauth2 import service_account
-from gsheetsdb import connect
+import gspread
+from google.oauth2.service_account import Credentials
 import variables
 
-# from st_files_connection import FilesConnection
+scopes = [
+    "https://www.googleapis.com/auth/spreadsheets",
+]
 
-# Create a connection object.
-credentials = service_account.Credentials.from_service_account_info(
-    st.secrets["gcp_service_account"],
-    scopes=[
-        "https://www.googleapis.com/auth/spreadsheets",
-    ],
+skey = st.secrets["gcp_service_account"]
+credentials = Credentials.from_service_account_info(
+    skey,
+    scopes=scopes,
 )
-conn = connect(credentials=credentials)
+client = gspread.authorize(credentials)
 
 
-# Perform SQL query on the Google Sheet.
-# Uses st.cache_data to only rerun when the query changes or after 10 min.
-@st.cache_data(ttl=600)
-def run_query(query):
-    rows = conn.execute(query, headers=1)
-    rows = rows.fetchall()
-    return rows
+def spreadsheet_save_prompt_and_story(data: List, sheet_name="Results"):
+    sh = client.open_by_url(st.secrets["private_gsheets_url"])
+    worksheet = sh.worksheet(sheet_name)
+    worksheet.append_row(data)
 
-
-sheet_url = st.secrets["private_gsheets_url"]
-rows_sheet = run_query(f'SELECT * FROM "{sheet_url}"')
-
-# Print results.
-for row in rows_sheet:
-    st.write(row)
-    # st.write(f"{row.name} has a :{row.pet}:")
 
 # Setting up the sidebar
 st.sidebar.header('How to use')
@@ -52,6 +47,53 @@ st.divider()
 
 connect_openai = ConnectOpenAI.ConnectOpenAI(api_key=st.secrets['OPENAI_KEY'],
                                              instruction=st.secrets.stories.system_prompt)
+
+
+def format_email_text(**kwargs):
+    lines = []
+    for key, val in kwargs.items():
+        lines.append(f"<strong>{key}</strong>")
+        lines.append(str(val))
+        lines.append('')
+    st.write(lines)
+    return lines
+
+
+def send_email(message: list) -> None:
+    """
+    Sends an email message
+    :param message: The lines of the message
+    :return: None
+    """
+    sender_name = st.secrets.smtp.SENDER_NAME
+    sender_email = st.secrets.smtp.SENDER_EMAIL
+    sender_email_complete = f"{sender_name} <{sender_email}>"
+    receiver_name = st.secrets.smtp.RECIPIENT_NAME
+    receiver_email = f"{receiver_name} <{st.secrets.smtp.RECIPIENT_EMAIL}>"
+    password = st.secrets.smtp.SENDER_PASSWORD
+    today = datetime.datetime.today()
+    subject = f"New story created, {today.strftime('%F %T')}"
+    message = '<br />\n'.join(message)
+
+    msg = MIMEMultipart()
+    msg['From'] = sender_email_complete
+    msg['To'] = receiver_email
+    msg['Subject'] = subject
+
+    body = f"""
+        <html>
+        <body>
+        {message}
+        </body>
+        </html>
+        """
+
+    msg.attach(MIMEText(body, 'html'))
+
+    with smtplib.SMTP('smtp.gmail.com', 587) as server:
+        server.starttls()
+        server.login(sender_email, password)
+        server.sendmail(sender_email, receiver_email, msg.as_string())
 
 
 def create_prompt_section():
@@ -81,15 +123,26 @@ def check_prompt():
 
 
 def generate_story():
-    user_message = f'{st.session_state.user_message}\n\nMake the story for a {st.session_state.age} year old.'
+    user_message = f'{st.session_state.user_message}.\n\nMake the story for a {st.session_state.age} year old.'
     story_text, finish_reason = connect_openai.create_story(user_message=user_message, test=True, wait_time=4)
     story_warning_text = None
     if finish_reason == 'length':
         story_warning_text = 'The response was cut off because it was too long.'
     elif finish_reason == 'content_filter':
         story_warning_text = 'The story is not respecting OpenAI\'s usage policies.'
+    st.session_state.user_message_complete = user_message
     st.session_state.story_warning = story_warning_text
     st.session_state.story = story_text
+    data = {
+        'user_message': st.session_state.user_message,
+        'age': st.session_state.age,
+        'user_message_complete': st.session_state.user_message_complete,
+        'story': st.session_state.story,
+        'finish_reason': finish_reason,
+    }
+    spreadsheet_save_prompt_and_story(list(data.values()))
+    lines = format_email_text(**data)
+    send_email(lines)
 
 
 def create_feedback_section():
@@ -102,6 +155,15 @@ def create_feedback_section():
 
 
 def provide_feedback():
+    data = {
+        'user_message': st.session_state.user_message,
+        'age': st.session_state.age,
+        'user_message_complete': st.session_state.user_message_complete,
+        'story': st.session_state.story,
+        'feedback': st.session_state.feedback,
+        'additional_comments': st.session_state.additional_comments,
+    }
+    spreadsheet_save_prompt_and_story(list(data.values()), 'Feedback')
     st.session_state.feedback_given = True
 
 
