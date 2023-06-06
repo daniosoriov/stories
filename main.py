@@ -22,11 +22,31 @@ credentials = Credentials.from_service_account_info(
 client = gspread.authorize(credentials)
 
 
-def spreadsheet_save_prompt_and_story(data: List, sheet_name="Results"):
-    sh = client.open_by_url(st.secrets["private_gsheets_url"])
-    worksheet = sh.worksheet(sheet_name)
-    worksheet.append_row(data)
+def spreadsheet_save_data(data: List, sheet_name: str = "Results") -> bool:
+    """
+    Saves data (the prompt and the generated story) to a Google Sheets worksheet.
 
+    This method appends a new row to the specified Google Sheets worksheet with the provided data list.
+    It requires that we have valid credentials for accessing the Google Sheets API.
+
+    :param data: The list of data to append as a new row to the worksheet.
+    This list should contain the prompt and the generated story.
+    :param sheet_name: The name of the worksheet where the data will be appended.
+    If not provided, the default worksheet name is "Results".
+    :return: True if the operation was successful, False otherwise.
+    """
+    try:
+        sh = client.open_by_url(st.secrets["private_gsheets_url"])
+        worksheet = sh.worksheet(sheet_name)
+        worksheet.append_row(data)
+        return True
+    except Exception as e:
+        print(f"Error while saving data to spreadsheet: {e}")
+        return False
+
+
+# Configuring the page
+st.set_page_config(page_title=variables.page_title, page_icon="📚", menu_items=variables.menu_items)
 
 # Setting up the sidebar
 st.sidebar.header('How to use')
@@ -42,7 +62,7 @@ for element in variables.faq:
             st.sidebar.write(text)
 
 st.title('Story Sprout')
-st.subheader('Create respectful stories for children aged 2-6 using OpenAI GPT-4')
+st.subheader('Create respectful stories for children between 0 and 8 years old')
 st.divider()
 
 connect_openai = ConnectOpenAI.ConnectOpenAI(api_key=st.secrets['OPENAI_KEY'],
@@ -96,13 +116,15 @@ def send_email(message: list) -> None:
 
 
 def create_prompt_section():
-    with st.expander(label='Prompt', expanded=True):
-        st.write(variables.prompt_language_text)
-        st.text_area('Short description', max_chars=400, key='user_message', help=variables.prompt_text_area_help,
-                     placeholder='Write a story about...')
-        st.number_input('Age of the child?', min_value=2, max_value=6, step=1, format='%d', key='age',
+    with st.expander(label='Create your story', expanded=True):
+        st.text_area('What is your story about?', max_chars=400, key='user_message',
+                     help=variables.prompt_text_area_help,
+                     placeholder='Write a story about a child named... who had a ... and now is ...')
+        st.caption(variables.prompt_caption)
+        st.number_input('Age of the reader?', min_value=0, max_value=8, value=4, step=1, format='%d', key='age',
                         help=variables.prompt_age_help)
-    st.button('Generate a story', on_click=check_prompt)
+    st.button('Generate story', on_click=check_prompt)
+    st.caption(variables.prompt_button_caption)
     st.divider()
 
 
@@ -138,6 +160,7 @@ def generate_story():
     st.session_state.user_message_complete = user_message
     st.session_state.story_warning = story_warning_text
     st.session_state.story = story_text
+    st.session_state.stories.append(story_text)
     data = {
         'user_message': st.session_state.user_message,
         'age': st.session_state.age,
@@ -146,9 +169,10 @@ def generate_story():
         'finish_reason': finish_reason,
         'total_tokens': connect_openai.total_tokens,
     }
-    spreadsheet_save_prompt_and_story(list(data.values()))
-    lines = format_email_text(**data)
-    send_email(lines)
+    spreadsheet_save_data(list(data.values()))
+    if st.secrets.smtp.SEND_EMAIL:
+        lines = format_email_text(**data)
+        send_email(lines)
 
 
 def create_feedback_section():
@@ -169,7 +193,7 @@ def provide_feedback():
         'feedback': st.session_state.feedback,
         'additional_comments': st.session_state.additional_comments,
     }
-    spreadsheet_save_prompt_and_story(list(data.values()), 'Feedback')
+    spreadsheet_save_data(list(data.values()), 'Feedback')
     st.session_state.feedback_given = True
 
 
@@ -180,6 +204,8 @@ def restart_app():
 
 if 'story' not in st.session_state:
     st.session_state.story = ''
+if 'stories' not in st.session_state:
+    st.session_state.stories = []
 if 'prompt_error' not in st.session_state:
     st.session_state.prompt_error = None
 if 'story_warning' not in st.session_state:
@@ -192,17 +218,18 @@ if st.session_state.prompt_error is not None:
     if st.session_state.prompt_error:
         st.error(st.session_state.prompt_error)
     else:
-        if not st.session_state.story:
-            with st.spinner('Creating your story, please be patient...'):
-                generate_story()
-                if st.session_state.story_warning:
-                    st.warning(st.session_state.story_warning)
-                st.success("Here's your story!")
-
-        st.write(st.session_state.story)
-        st.divider()
+        # if not st.session_state.story:
+        with st.spinner('Creating your story, please be patient...'):
+            generate_story()
+            if st.session_state.story_warning:
+                st.warning(st.session_state.story_warning)
+            st.success("Here's your story!")
+        for num in range(len(st.session_state.stories), 0, -1):
+            expanded = True if (num == len(st.session_state.stories)) else False
+            with st.expander(label=f'Story #{num}', expanded=expanded):
+                st.write(st.session_state.stories[num - 1])
         if not st.session_state.feedback_given:
             create_feedback_section()
         else:
             st.info('Thank you for your feedback!')
-            st.button("Create another story?", on_click=restart_app)
+        st.button("Clean stories and start again?", on_click=restart_app)
