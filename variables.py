@@ -50,7 +50,7 @@ faq = (
         'question': "Can I influence the content of the story?",
         'answer': "Yes, you guide the story by providing an initial short statement and indicating the age of the "
                   "reader(s). "
-                  "For example, you can input their favorite color, food, or themes like animals or music.",
+                  "For example, you can input their preferred color, food, or themes like animals or music.",
     },
     {
         'question': "Will all the stories be different?",
@@ -102,15 +102,15 @@ faq = (
 # Main prompt variables
 prompt_text_area_help = 'Let us know what the story should be about, indicating the name of the child(ren) involved ' \
                         'and any other detail you think is relevant to the story'
-prompt_caption = '*For example: Write a story about a 6-year-old boy named Alex who accidentally ' \
+prompt_caption = 'For example: *Write a story about a 6-year-old boy named Alex who accidentally ' \
                  'breaks a vase at home.*\n\n' \
-                 'You can write in your favorite language too, and story sprout will produce a story ' \
+                 'You can write in your preferred language too, and story sprout will produce a story ' \
                  'in your language.'
 prompt_age_help = 'The age of your child (the reader) will help us tailor the story for the age group. ' \
                   'We currently support from 0 to 8 years old'
 prompt_no_text_error = 'Please tell us what the story is about.\n\n' \
                        'For example: *A child named Jamie learns about different emotions ' \
-                       'when they lose their favorite toy and then find it again.*'
+                       'when they lose their dearest toy and then find it again.*'
 openai_url = "https://openai.com/policies/usage-policies"
 prompt_flagged_error = "Your prompt does not comply with OpenAI's " \
                        f"usage policies: <{openai_url}> 🔗.\n\n" \
@@ -119,19 +119,25 @@ prompt_button_caption = 'Each time you click on "Generate story", a new story wi
                         'All the stories will remain here until you refresh the page or restart the app.'
 
 # Rate section variables
+# rate_options = {
+#     0: '0️⃣ - 😞',
+#     1: '1️⃣ - 🫤',
+#     2: '2️⃣ - 😐',
+#     3: '3️⃣ - 🙂',
+#     4: '4️⃣ - 😊',
+#     5: '5️⃣ - 🤩',
+# }
 rate_options = {
-    0: '0️⃣ - 😞',
-    1: '1️⃣ - 🫤',
-    2: '2️⃣ - 😐',
-    3: '3️⃣ - 🙂',
-    4: '4️⃣ - 😊',
-    5: '5️⃣ - 🤩',
+    0: '😞',
+    1: '🫤',
+    2: '😐',
+    3: '🙂',
+    4: '😊',
+    5: '🤩',
 }
 rate_msg = "Thank you for using Story Sprout! We hope you enjoyed your unique story. " \
            "We'd love to hear what you thought about it - your feedback helps us " \
-           "improve and deliver even better stories. And if you have any extra " \
-           "thoughts or suggestions, don't hesitate to share them with us. " \
-           "Thank you for helping Story Sprout grow!"
+           "improve and deliver even better stories."
 
 # Support variables
 example_story = """
