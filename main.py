@@ -61,6 +61,8 @@ for element in variables.faq:
         elif type_text == 'answer':
             st.sidebar.write(text)
 
+st.sidebar.image('img/bmc_qr.png', width=200)
+
 # Main section
 st.title('Story Sprout')
 st.subheader('Create respectful stories for children up to 8 years old')

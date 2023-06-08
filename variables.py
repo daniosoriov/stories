@@ -97,6 +97,11 @@ faq = (
         'question': "What AI do you use?",
         'answer': f"We use OpenAI's ChatGPT 4 <{openai_gpt4_url}> 🔗",
     },
+    {
+        'question': "How can I support Story Sprout?",
+        'answer': f"You can support my work by donating an amount of your like with 'Buy me a Coffee' "
+                  f"<https://bmc.link/danioshi> 🔗",
+    },
 )
 
 # Main prompt variables
